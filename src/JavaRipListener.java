@@ -2,7 +2,8 @@ import java.io.*;
 import java.net.*;
 
 // Routz RIP implementation challenge :)
-// Implemented as per https://tools.ietf.org/html/rfc1058
+// RIPv1 as per https://tools.ietf.org/html/rfc1058
+// RIPv2 as per https://tools.ietf.org/html/rfc2453
 // 5/11/2019 routing table added
 // todo: RIPV1 and RIPv2 support; can be started either in V1 or V2 mode
 // todo: implement runner to send routing table every 30 seconds (timers) so we also send something back && clean up expired routes
