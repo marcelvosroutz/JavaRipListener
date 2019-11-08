@@ -1,10 +1,12 @@
+import RIP.ripRouteEntry;
+
 import java.util.*;
 
-public class ripRouteTable {
+public class routingTable {
 
     private List routingTable;
 
-    public ripRouteTable() {
+    public routingTable() {
         // construct empty routing table
         // routing table will be unique based on combination of address+subnet+gateway+metric
         // probably can be improved to fully match specs of a routing table...
@@ -14,7 +16,7 @@ public class ripRouteTable {
     public void addRipRouteEntry (ripRouteEntry ripRouteEntry) {
         // traverse the routing table to see if we have duplicate route entries; if found, update the timestamp
         for (Iterator iter = routingTable.iterator() ; iter.hasNext();) {
-            ripRouteEntry routeEntry = (ripRouteEntry) iter.next();
+            ripRouteEntry routeEntry = (RIP.ripRouteEntry) iter.next();
             // ugly loop to determine duplicate route entries...
             if (ripRouteEntry.getNetworkAddress().equals(routeEntry.getNetworkAddress()) && ripRouteEntry.getSubnetAddress().equals(routeEntry.getSubnetAddress()) && ripRouteEntry.getNextHop().equals(routeEntry.getNextHop()) && ripRouteEntry.getRouteMetric() == routeEntry.getRouteMetric()) {
                 //System.out.println("Route already exist; updating lastUpdatedTimestamp. Routing table size: " + routingTable.size());
