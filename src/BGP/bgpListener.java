@@ -105,23 +105,37 @@ public class bgpListener extends Thread  {
                                 byte[] bgpPeerAutonomousSystem = new byte[2];
                                 byte[] bgpPeerHoldTime = new byte[2];
                                 byte[] bgpPeerIdentifier = new byte[4];
+                                byte[] bgpPeerAdditionalParametersLength = new byte[1];
+
 
                                 System.arraycopy(bgpPayload, 0, bgpPeerVersion, 0, 1);
                                 System.arraycopy(bgpPayload, 1, bgpPeerAutonomousSystem, 0, 2);
                                 System.arraycopy(bgpPayload, 3, bgpPeerHoldTime, 0, 2);
                                 System.arraycopy(bgpPayload, 5, bgpPeerIdentifier, 0, 4);
+                                System.arraycopy(bgpPayload, 9, bgpPeerAdditionalParametersLength, 0, 1);
+
 
                                 System.out.println("BGP_OPEN -> Version: " + (bgpPeerVersion[0] & 0xFF));
                                 System.out.println("BGP_OPEN -> Peer AS Number: " + (((bgpPeerAutonomousSystem[0] & 0xFF ) << 8 ) | (bgpPeerAutonomousSystem[1]  & 0xFF)));
                                 System.out.println("BGP_OPEN -> Peer Hold Time: " + (((bgpPeerHoldTime[0] & 0xFF ) << 8 ) | (bgpPeerHoldTime[1]  & 0xFF)));
                                 System.out.println("BGP_OPEN -> Identifier: " + ((bgpPeerIdentifier[0] & 0xFF) + "." + (bgpPeerIdentifier[1] & 0xFF) + "." + (bgpPeerIdentifier[2] & 0xFF) + "." + (bgpPeerIdentifier[3] & 0xFF)));
+                                //System.out.println("BGP_OPEN -> Additional Parameters Length: " + (bgpPeerAdditionalParametersLength[0] & 0xFF));
 
-                                if (bgpPayload.length>9) {
-                                    // this is not it.. check for Optional parameters...
+                                if ((bgpPeerAdditionalParametersLength[0] & 0xFF)>0) {
+                                    // this is not it.... we received additional parameters
+                                    // we will not parse these messages; just display the command codes and length...
+                                    // as these extensions cover multiple RFC's -> https://www.bgp4.as/bgp-capability-codes
+
+                                    byte[] bgpAdditionalParameters = new byte[(bgpPeerAdditionalParametersLength[0] & 0xFF)];
+                                    System.arraycopy(bgpPayload, 10, bgpAdditionalParameters, 0, (bgpPeerAdditionalParametersLength[0] & 0xFF));
+
+                                    int i = 0;
+
+                                    while (i < (bgpPeerAdditionalParametersLength[0] & 0xFF)) {
+                                        System.out.println("BGP_OPEN -> Additional Parameter: TYPE:" + bgpAdditionalParameters[0+i] + " LENGTH: " +  bgpAdditionalParameters[1+i] + " (No Further Parsing)");
+                                        i=i+((bgpAdditionalParameters[1+i] & 0xFF)+2); // increase size of I with additional parameter length
+                                    }
                                 }
-
-
-
                                 break;
                             case BGP_UPDATE:
                                 System.out.println("bgpType: BGP_UPDATE");
