@@ -41,7 +41,7 @@ public class ripListener extends Thread  {
             byte[] ripHeader;
             byte[] ripPayload;
 
-            System.out.println("Tread: Waiting for Broadcast (255.255.255.255) and Multicast (224.0.0.9) packets on UDP/520 (RIP v1/v2) traffic");
+            System.out.println("Tread: Waiting for broadcast (255.255.255.255) or multicast (224.0.0.9) packets on UDP/520 (RIP v1/v2) traffic");
 
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 

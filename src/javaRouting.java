@@ -1,4 +1,5 @@
 import RIP.*;
+import BGP.*;
 
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -34,6 +35,10 @@ public class javaRouting {
         // start thread for receiving RIPv2 traffic (As RIPv2 is backwards compatible; this one also handles RIPv1 traffic
         Thread ripListener = new Thread (new ripListener(routeHandler));
         ripListener.start();
+
+        // start thread for initiating BGP peering session
+        Thread bgpListener = new Thread (new bgpListener(routeHandler));
+        bgpListener.start();
 
         // start a thread for maintaining routing table entries
         // todo: cleanup routing tables.
