@@ -25,8 +25,10 @@ public class routingTable {
             }
         }
         // if we reached this part; lets assume its a new route :)
-        //System.out.println("Adding new route to routing table");
         routingTable.add(ripRouteEntry);
+
+        // print our routing table on the screen
+        printRoutingTable();
     }
 
     public void printRoutingTable() {

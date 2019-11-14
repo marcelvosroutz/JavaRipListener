@@ -26,7 +26,7 @@ public class javaRouting {
     private static routingTable routingTable = new routingTable();
 
     public static void main(String[] args) {
-        System.out.println("Routz Coding Challenge v0.4");
+        System.out.println("Routz Coding Challenge v0.5");
 
         // construct a synchronised list to be used as  queue for exchange of RIP packets between broadcast and multicast listening threads
         LinkedBlockingQueue routeHandler = new LinkedBlockingQueue<>(1024);
@@ -44,8 +44,6 @@ public class javaRouting {
                ripRouteEntry routeEntry = (ripRouteEntry)routeHandler.take();
                routingTable.addRipRouteEntry(routeEntry);
 
-               // print our routing table on the screen
-               //routingTable.printRoutingTable();
            } catch (InterruptedException e) {
                System.out.println("Cannot sleep! Phun intended :)");
            }

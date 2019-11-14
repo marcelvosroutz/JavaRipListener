@@ -23,17 +23,17 @@ public class ripRouteEntry {
         // constructor parses a byte[20] block containing the route information
     }
 
-    public void parseRipRouteEntry(byte[] ripPayload, int ripVersion, byte[] sourceIpAddress) throws IOException {
+    public void parseRipRouteEntry(byte[] ripPayload, int ripVersion, byte[] sourceIpAddress, int offset) throws IOException {
 
         // parse addressFamily & routeTag
-        addressFamily =  ((ripPayload[0] & 0xFF) << 8 ) | ((ripPayload[1] & 0xFF) << 0 );
-        routeTag =  ((ripPayload[2] & 0xFF) << 8 ) | ((ripPayload[3] & 0xFF) << 0 );
+        addressFamily =  ((ripPayload[0+offset] & 0xFF) << 8 ) | ((ripPayload[1+offset] & 0xFF) << 0 );
+        routeTag =  ((ripPayload[2+offset] & 0xFF) << 8 ) | ((ripPayload[3+offset] & 0xFF) << 0 );
 
         // read network address
-        System.arraycopy(ripPayload, 4, networkAddress, 0, 4);
+        System.arraycopy(ripPayload, 4+offset, networkAddress, 0, 4);
 
         // subnet calculations
-        System.arraycopy(ripPayload, 8, subnetAddress, 0, 4);
+        System.arraycopy(ripPayload, 8+offset, subnetAddress, 0, 4);
 
         // Store subnet also as string for quick reference
         subnetAddressString = ((subnetAddress[0]  & 0xFF) + "." + (subnetAddress[1]  & 0xFF) + "." + (subnetAddress[2]  & 0xFF) + "." + (subnetAddress[3]  & 0xFF));
@@ -57,14 +57,14 @@ public class ripRouteEntry {
         }
 
         // nextHop calculations
+        System.arraycopy(ripPayload, 12+offset, nextHop, 0, 4);
+
         if ((nextHop[0] + nextHop[1] + nextHop[2] + nextHop[3]) == 0) {
             nextHop = sourceIpAddress;
-        } else {
-            System.arraycopy(ripPayload, 12, nextHop, 0, 4);
         }
 
         // Metric calculations
-        routeMetric = (((ripPayload[16] & 0xFF) << 24 ) | ((ripPayload[16] & 0xFF) << 16 ) | ((ripPayload[16] & 0xFF) << 8 ) | (ripPayload[17] & 0xFF));
+        routeMetric = (((ripPayload[16+offset] & 0xFF) << 24 ) | ((ripPayload[16+offset] & 0xFF) << 16 ) | ((ripPayload[16+offset] & 0xFF) << 8 ) | (ripPayload[17+offset] & 0xFF));
 
     }
 

@@ -66,10 +66,13 @@ public class ripListener extends Thread  {
                             System.out.println("Received RIP version: " + ripVersion + " update from " + packet.getAddress().getCanonicalHostName() + ", containing  " + qty + " addresses");
                             // traverse the packet and parse ripListeners.ripRouteEntry objects into ripRoutes until we read no more networks
                             try {
-                                for (int i = 0; i <= qty; i++) {
+                                for (int i = 0; i <= qty-1; i++) {
+                                    // determine the offset where to start parsing the packet
+                                    int offset = (i*20);
+
                                     // parse block of 20 bytes as ripListeners.ripRouteEntry
                                     ripRouteEntry ripRouteEntry = new ripRouteEntry(ripVersion);
-                                    ripRouteEntry.parseRipRouteEntry(ripPayload, ripVersion, packet.getAddress().getAddress());
+                                    ripRouteEntry.parseRipRouteEntry(ripPayload, ripVersion, packet.getAddress().getAddress(), offset);
                                     System.out.println(
                                             "Route Address Family: " + ripRouteEntry.getAddressFamily() + ", Route Tag: " + ripRouteEntry.getRouteTag() + ", Route: " + ripRouteEntry.getNetworkAddress() +
                                                     " Mask: " + ripRouteEntry.getSubnetAddress() + ", nextHop: " + ripRouteEntry.getNextHop() + " , Metric: " + ripRouteEntry.getRouteMetric()
