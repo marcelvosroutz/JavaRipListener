@@ -10,6 +10,14 @@ public class bgpListener extends Thread  {
     Thread runner;
     LinkedBlockingQueue routeHandler;
 
+    // our BGP settings
+    private static int ourAutonomousSystemNumber = 11111;
+    private static int ourHoldTime = 3;
+    private byte[] ourIdentifier = new byte[4]{'1','2','3','4'}
+
+    // BGP Peers:
+
+
     // define BGP command TYPE's
     public static final byte BGP_OPEN = 0x01, BGP_UPDATE = 0x02, BGP_NOTIFICATION = 0x03, BGP_KEEPALIVE = 0x04;
 
@@ -220,27 +228,21 @@ public class bgpListener extends Thread  {
 
     private void sendBgpOpen() {
         // construct BGP keepAlive message as per RFC (16 x 0xFF, 0x00 length, type KEEPALIVE 0x04
-
-        //04 8a 0f 00 b4 c8 64 32 3b 00
-
-        int ourAsNumber = 11111;
-        int ourHoldTime = 3;
-
         byte[] sendOpen = new byte[29];
         Arrays.fill(sendOpen, (byte)0xFF); // fill with all 0xFF
         sendOpen[16] = 0; // msg length = 23 (0 content but 19 byte header)
         sendOpen[17] = 29; // header is 19 + 10 bytes (open,version, as, holdtime, identfier
-        sendOpen[18] = 1; // type BGP_OPEN = 1
+        sendOpen[18] = BGP_OPEN; // type BGP_OPEN = 1
         sendOpen[19] = 4; // type BGP_VERSION = 4
-        sendOpen[20] = (byte) ((ourAsNumber >> 8) & 0xFF); // type BGP_AS
-        sendOpen[21] = (byte) (ourAsNumber & 0xFF); // type BGP_AS
+        sendOpen[20] = (byte) ((ourAutonomousSystemNumber >> 8) & 0xFF); // type BGP_AS
+        sendOpen[21] = (byte) (ourAutonomousSystemNumber & 0xFF); // type BGP_AS
         sendOpen[22] = (byte) ((ourHoldTime >> 8) & 0xFF); // HOLD_TIME
         sendOpen[23] = (byte) (ourHoldTime & 0xFF); // HOLD_TIME
-        sendOpen[24] = 1; // BGP IDENTIFIER
-        sendOpen[25] = 2; // BGP IDENTIFIER
-        sendOpen[26] = 3; // BGP IDENTIFIER
-        sendOpen[27] = 4; // BGP IDENTIFIER
-        sendOpen[28] = 0; // BGP ADDITIONAL PARAMETER LENGTH = 0 // We do not send additional parameters
+        sendOpen[24] = ourIdentifier[0]; // BGP IDENTIFIER
+        sendOpen[25] = ourIdentifier[1]; // BGP IDENTIFIER
+        sendOpen[26] = ourIdentifier[2]; // BGP IDENTIFIER
+        sendOpen[27] = ourIdentifier[3]; // BGP IDENTIFIER
+        sendOpen[28] = 0; // BGP ADDITIONAL PARAMETER LENGTH = 0 // We do not send additional parameters as this is a dumb java program :)
 
         // write data to socket
         try {
