@@ -53,6 +53,8 @@ public class bgpListener extends Thread  {
                     is = new DataInputStream(socket.getInputStream()); // receiving stuff
                     os = new BufferedOutputStream(socket.getOutputStream()); // sending stuff
 
+                    Boolean sendKeepAlive=false;
+
                     // bgp header is 19 bytes
                     byte[] bgpHeader = new byte[19];
                     byte[] bgpPayload;
@@ -94,10 +96,10 @@ public class bgpListener extends Thread  {
                         is.readFully(bgpPayload);
 
                         // parse the BGP header
-                        System.out.println("--");
-                        System.out.println("Received BGP message from " + socket.getInetAddress().toString());
-                        System.out.println("BGP HEADER: " + byteArrayToHex(bgpHeader));
-                        System.out.println("BGP PAYLOAD: " + byteArrayToHex(bgpPayload));
+                        //System.out.println("--");
+                        //System.out.println("Received BGP message from " + socket.getInetAddress().toString());
+                        //System.out.println("BGP HEADER: " + byteArrayToHex(bgpHeader));
+                        //System.out.println("BGP PAYLOAD: " + byteArrayToHex(bgpPayload));
 
                         switch (bgpType[0]) {
                             case BGP_OPEN:
@@ -200,15 +202,15 @@ public class bgpListener extends Thread  {
                                 break;
                             case BGP_KEEPALIVE:
                                 // A KEEPALIVE message consists of only the message header and has a length of 19 octets.
+                                //System.out.println("bgpType: BGP_KEEPALIVE");
+                                    sendKeepAlive();
 
-                                System.out.println("bgpType: BGP_KEEPALIVE");
                                 break;
                             default:
                                 System.out.print("bgpType: UNKNOWN bgp type: " + byteArrayToHex(bgpType));
                                 break;
                         }
                     }
-
                 } catch (IOException errorMessage) {
                     System.out.println("TCP Session closed");
                 }
@@ -221,16 +223,25 @@ public class bgpListener extends Thread  {
 
         //04 8a 0f 00 b4 c8 64 32 3b 00
 
+        int ourAsNumber = 11111;
+        int ourHoldTime = 3;
+
         byte[] sendOpen = new byte[29];
         Arrays.fill(sendOpen, (byte)0xFF); // fill with all 0xFF
         sendOpen[16] = 0; // msg length = 23 (0 content but 19 byte header)
-        sendOpen[17] = 29; // header is 19 +
-        sendOpen[18] = 1; // type BGP_OPEN
-        sendOpen[19] = 4; // type BGP_VERSION_4
-        sendOpen[20] = 10; // type BGP_AS
-        sendOpen[21] = 10; // type BGP_AS
-        sendOpen[28] = 0; // We do not send additional parameters
-        // kiki
+        sendOpen[17] = 29; // header is 19 + 10 bytes (open,version, as, holdtime, identfier
+        sendOpen[18] = 1; // type BGP_OPEN = 1
+        sendOpen[19] = 4; // type BGP_VERSION = 4
+        sendOpen[20] = (byte) ((ourAsNumber >> 8) & 0xFF); // type BGP_AS
+        sendOpen[21] = (byte) (ourAsNumber & 0xFF); // type BGP_AS
+        sendOpen[22] = (byte) ((ourHoldTime >> 8) & 0xFF); // HOLD_TIME
+        sendOpen[23] = (byte) (ourHoldTime & 0xFF); // HOLD_TIME
+        sendOpen[24] = 1; // BGP IDENTIFIER
+        sendOpen[25] = 2; // BGP IDENTIFIER
+        sendOpen[26] = 3; // BGP IDENTIFIER
+        sendOpen[27] = 4; // BGP IDENTIFIER
+        sendOpen[28] = 0; // BGP ADDITIONAL PARAMETER LENGTH = 0 // We do not send additional parameters
+
         // write data to socket
         try {
             System.out.println("--");
@@ -252,8 +263,8 @@ public class bgpListener extends Thread  {
 
         // write data to socket
         try {
-            System.out.println("--");
-            System.out.println("Sending KeepAlive: " + byteArrayToHex(keepAlive));
+  //          System.out.println("--");
+//            System.out.println("Sending KeepAlive: " + byteArrayToHex(keepAlive));
             os.write(keepAlive);
             os.flush();
         } catch (Exception e) {
