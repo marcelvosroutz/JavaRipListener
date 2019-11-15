@@ -2,6 +2,7 @@ import RIP.*;
 import BGP.*;
 
 import java.util.concurrent.LinkedBlockingQueue;
+import java.awt.Frame;  // Using Frame class in package java.awt
 
 // Routz RIP implementation challenge :)
 // RIPv1 as per https://tools.ietf.org/html/rfc1058 in ripListener
@@ -31,17 +32,23 @@ public class javaRouting {
 
         // construct a synchronised list to be used as  queue for exchange of RIP packets between broadcast and multicast listening threads
         LinkedBlockingQueue routeHandler = new LinkedBlockingQueue<>(1024);
+        LinkedBlockingQueue loggingQueue = new LinkedBlockingQueue<>(1024);
 
         // start thread for receiving RIPv2 traffic (As RIPv2 is backwards compatible; this one also handles RIPv1 traffic
         Thread ripListener = new Thread (new ripListener(routeHandler));
-        //ripListener.start();
+        ripListener.start();
 
         // start thread for initiating BGP peering session
-        Thread bgpListener = new Thread (new bgpListener(routeHandler));
+        Thread bgpListener = new Thread (new bgpListener(routeHandler, loggingQueue));
         bgpListener.start();
 
         // start a thread for maintaining routing table entries
         // todo: cleanup routing tables.
+
+        //Thread myGui = new Thread(new myGui());
+
+        myGui gui = new myGui(loggingQueue);
+
 
         while (true) {
            try {

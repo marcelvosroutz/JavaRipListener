@@ -8,15 +8,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class bgpListener extends Thread  {
 
     Thread runner;
-    LinkedBlockingQueue routeHandler;
+    LinkedBlockingQueue routeHandler, loggingQueue;
 
     // our BGP settings
-    private static int ourAutonomousSystemNumber = 11111;
+    private static int ourAutonomousSystemNumber = 11121;
     private static int ourHoldTime = 3;
-    private byte[] ourIdentifier = new byte[4]{'1','2','3','4'}
-
-    // BGP Peers:
-
+    private byte[] ourIdentifier = new byte[4];
 
     // define BGP command TYPE's
     public static final byte BGP_OPEN = 0x01, BGP_UPDATE = 0x02, BGP_NOTIFICATION = 0x03, BGP_KEEPALIVE = 0x04;
@@ -40,9 +37,10 @@ public class bgpListener extends Thread  {
 
     private Socket socket;
 
-    public bgpListener(LinkedBlockingQueue routeHandler) {
+    public bgpListener(LinkedBlockingQueue routeHandler, LinkedBlockingQueue loggingQueue) {
         runner = new Thread(this, "bgpListener Thread");
         this.routeHandler = routeHandler;
+        this.loggingQueue = loggingQueue;
     }
 
     public void run() {
@@ -54,7 +52,7 @@ public class bgpListener extends Thread  {
             while (true) {
                 try {
                     // show start message
-                    System.out.println("Tread: Waiting for peering request on TCP/179 (BGP) traffic");
+                    loggingQueue.put("Waiting for peering request on TCP/179 (BGP) traffic");
 
                     // construct our socket
                     socket = conn.accept();
@@ -104,10 +102,10 @@ public class bgpListener extends Thread  {
                         is.readFully(bgpPayload);
 
                         // parse the BGP header
-                        //System.out.println("--");
-                        //System.out.println("Received BGP message from " + socket.getInetAddress().toString());
-                        //System.out.println("BGP HEADER: " + byteArrayToHex(bgpHeader));
-                        //System.out.println("BGP PAYLOAD: " + byteArrayToHex(bgpPayload));
+                        //loggingQueue.put("--");
+                        //loggingQueue.add("Received BGP message from " + socket.getInetAddress().toString());
+                        //loggingQueue.put("BGP HEADER: " + byteArrayToHex(bgpHeader));
+                        //loggingQueue.put("BGP PAYLOAD: " + byteArrayToHex(bgpPayload));
 
                         switch (bgpType[0]) {
                             case BGP_OPEN:
@@ -129,7 +127,7 @@ public class bgpListener extends Thread  {
                                 //       |                                                               |
                                 //       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-                                System.out.println("bgpType: BGP_OPEN");
+                                loggingQueue.put("bgpType: BGP_OPEN");
 
                                 byte[] bgpPeerVersion = new byte[1];
                                 byte[] bgpPeerAutonomousSystem = new byte[2];
@@ -137,19 +135,17 @@ public class bgpListener extends Thread  {
                                 byte[] bgpPeerIdentifier = new byte[4];
                                 byte[] bgpPeerAdditionalParametersLength = new byte[1];
 
-
                                 System.arraycopy(bgpPayload, 0, bgpPeerVersion, 0, 1);
                                 System.arraycopy(bgpPayload, 1, bgpPeerAutonomousSystem, 0, 2);
                                 System.arraycopy(bgpPayload, 3, bgpPeerHoldTime, 0, 2);
                                 System.arraycopy(bgpPayload, 5, bgpPeerIdentifier, 0, 4);
                                 System.arraycopy(bgpPayload, 9, bgpPeerAdditionalParametersLength, 0, 1);
 
-
-                                System.out.println("BGP_OPEN -> Version: " + (bgpPeerVersion[0] & 0xFF));
-                                System.out.println("BGP_OPEN -> Peer AS Number: " + (((bgpPeerAutonomousSystem[0] & 0xFF ) << 8 ) | (bgpPeerAutonomousSystem[1]  & 0xFF)));
-                                System.out.println("BGP_OPEN -> Peer Hold Time: " + (((bgpPeerHoldTime[0] & 0xFF ) << 8 ) | (bgpPeerHoldTime[1]  & 0xFF)));
-                                System.out.println("BGP_OPEN -> Identifier: " + ((bgpPeerIdentifier[0] & 0xFF) + "." + (bgpPeerIdentifier[1] & 0xFF) + "." + (bgpPeerIdentifier[2] & 0xFF) + "." + (bgpPeerIdentifier[3] & 0xFF)));
-                                //System.out.println("BGP_OPEN -> Additional Parameters Length: " + (bgpPeerAdditionalParametersLength[0] & 0xFF));
+                                loggingQueue.put("BGP_OPEN -> Version: " + (bgpPeerVersion[0] & 0xFF));
+                                loggingQueue.put("BGP_OPEN -> Peer AS Number: " + (((bgpPeerAutonomousSystem[0] & 0xFF ) << 8 ) | (bgpPeerAutonomousSystem[1]  & 0xFF)));
+                                loggingQueue.put("BGP_OPEN -> Peer Hold Time: " + (((bgpPeerHoldTime[0] & 0xFF ) << 8 ) | (bgpPeerHoldTime[1]  & 0xFF)));
+                                loggingQueue.put("BGP_OPEN -> Identifier: " + ((bgpPeerIdentifier[0] & 0xFF) + "." + (bgpPeerIdentifier[1] & 0xFF) + "." + (bgpPeerIdentifier[2] & 0xFF) + "." + (bgpPeerIdentifier[3] & 0xFF)));
+                                //loggingQueue.put("BGP_OPEN -> Additional Parameters Length: " + (bgpPeerAdditionalParametersLength[0] & 0xFF));
 
                                 if ((bgpPeerAdditionalParametersLength[0] & 0xFF)>0) {
                                     // this is not it.... we received additional parameters
@@ -162,7 +158,7 @@ public class bgpListener extends Thread  {
                                     int i = 0;
 
                                     while (i < (bgpPeerAdditionalParametersLength[0] & 0xFF)) {
-                                        System.out.println("BGP_OPEN -> Additional Parameter: TYPE:" + bgpAdditionalParameters[0+i] + " LENGTH: " +  bgpAdditionalParameters[1+i] + " (No Further Parsing)");
+                                        loggingQueue.put("BGP_OPEN -> Additional Parameter: TYPE:" + bgpAdditionalParameters[0+i] + " LENGTH: " +  bgpAdditionalParameters[1+i] + " (No Further Parsing)");
                                         i=i+((bgpAdditionalParameters[1+i] & 0xFF)+2); // increase size of I with additional parameter length
                                     }
                                 }
@@ -182,7 +178,20 @@ public class bgpListener extends Thread  {
 
                                 break;
                             case BGP_UPDATE:
-                                System.out.println("bgpType: BGP_UPDATE");
+                                //      +-----------------------------------------------------+
+                                //      |   Withdrawn Routes Length (2 octets)                |
+                                //      +-----------------------------------------------------+
+                                //      |   Withdrawn Routes (variable)                       |
+                                //      +-----------------------------------------------------+
+                                //      |   Total Path Attribute Length (2 octets)            |
+                                //      +-----------------------------------------------------+
+                                //      |   Path Attributes (variable)                        |
+                                //      +-----------------------------------------------------+
+                                //      |   Network Layer Reachability Information (variable) |
+                                //      +-----------------------------------------------------+
+
+                                loggingQueue.put("bgpType: BGP_UPDATE");
+                                loggingQueue.put("PAYLOAD: " + byteArrayToHex(bgpPayload));
                                 break;
                             case BGP_NOTIFICATION:
                                 // BGP_NOTIFICATION message is sent when an error condiction is detected. connection is closed afterwards
@@ -192,7 +201,7 @@ public class bgpListener extends Thread  {
                                 //     | Error code    | Error subcode |   Data (variable)             |
                                 //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-                                System.out.println("bgpType: BGP_NOTIFICATION");
+                                loggingQueue.put("bgpType: BGP_NOTIFICATION");
 
                                 // parse NotificationMessage
                                 byte[] bgpErrorCode = new byte[1];
@@ -202,15 +211,15 @@ public class bgpListener extends Thread  {
                                 System.arraycopy(bgpPayload, 1, bgpErrorSubCode, 0, 1);
 
                                 // print the Error Code value from lookup Table
-                                System.out.println("BGP_NOTIFICATION -> Error Code: " + bgpNotificationCodes[bgpErrorCode[0]]);
+                                loggingQueue.put("BGP_NOTIFICATION -> Error Code: " + bgpNotificationCodes[bgpErrorCode[0]]);
 
                                 // print the Error SubCode value from lookup Table
-                                System.out.println("BGP_NOTIFICATION -> Error SubCode: " + bgpNotificationSubCodes[bgpErrorCode[0]][bgpErrorSubCode[0]]);
+                                loggingQueue.put("BGP_NOTIFICATION -> Error SubCode: " + bgpNotificationSubCodes[bgpErrorCode[0]][bgpErrorSubCode[0]]);
 
                                 break;
                             case BGP_KEEPALIVE:
                                 // A KEEPALIVE message consists of only the message header and has a length of 19 octets.
-                                //System.out.println("bgpType: BGP_KEEPALIVE");
+                                //loggingQueue.put("bgpType: BGP_KEEPALIVE");
                                     sendKeepAlive();
 
                                 break;
@@ -220,7 +229,7 @@ public class bgpListener extends Thread  {
                         }
                     }
                 } catch (IOException errorMessage) {
-                    System.out.println("TCP Session closed");
+                    loggingQueue.put("TCP Session closed");
                 }
             }
         } catch (Exception e) {}
@@ -238,16 +247,16 @@ public class bgpListener extends Thread  {
         sendOpen[21] = (byte) (ourAutonomousSystemNumber & 0xFF); // type BGP_AS
         sendOpen[22] = (byte) ((ourHoldTime >> 8) & 0xFF); // HOLD_TIME
         sendOpen[23] = (byte) (ourHoldTime & 0xFF); // HOLD_TIME
-        sendOpen[24] = ourIdentifier[0]; // BGP IDENTIFIER
-        sendOpen[25] = ourIdentifier[1]; // BGP IDENTIFIER
-        sendOpen[26] = ourIdentifier[2]; // BGP IDENTIFIER
-        sendOpen[27] = ourIdentifier[3]; // BGP IDENTIFIER
+        sendOpen[24] = 1; // BGP IDENTIFIER
+        sendOpen[25] = 2; // BGP IDENTIFIER
+        sendOpen[26] = 3; // BGP IDENTIFIER
+        sendOpen[27] = 4; // BGP IDENTIFIER
         sendOpen[28] = 0; // BGP ADDITIONAL PARAMETER LENGTH = 0 // We do not send additional parameters as this is a dumb java program :)
 
         // write data to socket
         try {
-            System.out.println("--");
-            System.out.println("Sending BGP_OPEN: " + byteArrayToHex(sendOpen));
+            loggingQueue.put("--");
+            loggingQueue.put("Sending BGP_OPEN: " + byteArrayToHex(sendOpen));
             os.write(sendOpen);
             os.flush();
         } catch (Exception e) {
@@ -265,8 +274,8 @@ public class bgpListener extends Thread  {
 
         // write data to socket
         try {
-  //          System.out.println("--");
-//            System.out.println("Sending KeepAlive: " + byteArrayToHex(keepAlive));
+  //          loggingQueue.put("--");
+//            loggingQueue.put("Sending KeepAlive: " + byteArrayToHex(keepAlive));
             os.write(keepAlive);
             os.flush();
         } catch (Exception e) {
