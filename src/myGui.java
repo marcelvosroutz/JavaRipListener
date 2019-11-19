@@ -9,7 +9,6 @@ public class myGui extends Frame {
     // Constructor to setup the GUI components
     public myGui(LinkedBlockingQueue loggingQueue) {
 
-
         JFrame.setDefaultLookAndFeelDecorated(true);
 
         JFrame frame = new JFrame("Java Coding Challenge!");
@@ -20,10 +19,17 @@ public class myGui extends Frame {
 
         JTextArea logging = new JTextArea();
         logging.setSize(750,350);
-        frame.add(logging);
+        //frame.add(logging);
 
+        JTable bgpNeighbourTable;
 
+        String []colsTable0 = new String[] { "TEST", "TEST" };
+        String [][]dataTable0 = new String[][] { new String[] {"1.1.1.1", "OpenSent"} };
 
+        bgpNeighbourTable = new JTable(dataTable0, colsTable0);
+        bgpNeighbourTable.setSize(200,100);
+
+        frame.add( bgpNeighbourTable );
         frame.setVisible(true);
 
         JLabel label = new JLabel("STARTING MEH GUI!!@!!! OMG OGM");

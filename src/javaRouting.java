@@ -34,20 +34,20 @@ public class javaRouting {
         LinkedBlockingQueue routeHandler = new LinkedBlockingQueue<>(1024);
         LinkedBlockingQueue loggingQueue = new LinkedBlockingQueue<>(1024);
 
+        //myGui gui = new myGui(loggingQueue);
+
         // start thread for receiving RIPv2 traffic (As RIPv2 is backwards compatible; this one also handles RIPv1 traffic
         Thread ripListener = new Thread (new ripListener(routeHandler));
         ripListener.start();
 
         // start thread for initiating BGP peering session
-        Thread bgpListener = new Thread (new bgpListener(routeHandler, loggingQueue));
+        Thread bgpListener = new Thread (new bgpListener(routeHandler));
         bgpListener.start();
 
         // start a thread for maintaining routing table entries
         // todo: cleanup routing tables.
 
         //Thread myGui = new Thread(new myGui());
-
-        myGui gui = new myGui(loggingQueue);
 
 
         while (true) {

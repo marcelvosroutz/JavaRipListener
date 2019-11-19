@@ -12,7 +12,8 @@ public class bgpListener extends Thread  {
 
     // our BGP settings
     private static int ourAutonomousSystemNumber = 11121;
-    private static int ourHoldTime = 3;
+    private static int ourHoldTime = 180;
+    private static int ourKeepAliveTimer = ourHoldTime/3;
     private byte[] ourIdentifier = new byte[4];
 
     // define BGP command TYPE's
@@ -21,12 +22,13 @@ public class bgpListener extends Thread  {
     // BGP ERROR CODES
     private String[] bgpNotificationCodes = new String[] {"", "MESSAGE_HEADER_ERROR", "OPEN_MESSAGE_ERROR", "UPDATE_MESSAGE_ERROR", "HOLD_TIME_EXPIRED", "FINITE_STATE_ERROR","CEASE"};
 
-    // Construct a multidimensinal array with BGP error cores in Plain Text
+    // Construct a MultiDimensional array with BGP error cores in Plain Text
     private String[][] bgpNotificationSubCodes = new String[][]{
             {},
             {"", "Connection Not Synchronized", "Bad Message Length", "Bad Message Type"},
             {"", "Unsupported Version Number", "Bad Peer AS", "Bad BGP Identifier", "Unsupported Optional Parameter", "Deprecated", "Unacceptable Hold Time"}
     };
+
 
     // define BGP command tags
     private int bgpCommand;
@@ -37,13 +39,16 @@ public class bgpListener extends Thread  {
 
     private Socket socket;
 
-    public bgpListener(LinkedBlockingQueue routeHandler, LinkedBlockingQueue loggingQueue) {
+    public bgpListener(LinkedBlockingQueue routeHandler) {
         runner = new Thread(this, "bgpListener Thread");
         this.routeHandler = routeHandler;
-        this.loggingQueue = loggingQueue;
     }
 
     public void run() {
+
+        // Start thread for sending keepalive information
+        Thread keepAliveTread = new Thread (new keepAliveTread(ourHoldTime, ourKeepAliveTimer, this));
+        keepAliveTread.start();
 
         try {
             conn = new ServerSocket(179);
@@ -52,12 +57,20 @@ public class bgpListener extends Thread  {
             while (true) {
                 try {
                     // show start message
-                    loggingQueue.put("Waiting for peering request on TCP/179 (BGP) traffic");
+                    System.out.println("Waiting for peering request on TCP/179 (BGP) traffic");
 
                     // construct our socket
                     socket = conn.accept();
                     is = new DataInputStream(socket.getInputStream()); // receiving stuff
                     os = new BufferedOutputStream(socket.getOutputStream()); // sending stuff
+
+                    // send BGP open to our new friend
+                    //
+                    // after we received a BGP_OPEN we need to send a keepalive
+                    // After a TCP connection is established, the first message sent by each
+                    // side is an OPEN message.  If the OPEN message is acceptable, a
+                    // KEEPALIVE message confirming the OPEN is sent back.
+                    sendBgpOpen();
 
                     Boolean sendKeepAlive=false;
 
@@ -102,10 +115,10 @@ public class bgpListener extends Thread  {
                         is.readFully(bgpPayload);
 
                         // parse the BGP header
-                        //loggingQueue.put("--");
+                        //System.out.println("--");
                         //loggingQueue.add("Received BGP message from " + socket.getInetAddress().toString());
-                        //loggingQueue.put("BGP HEADER: " + byteArrayToHex(bgpHeader));
-                        //loggingQueue.put("BGP PAYLOAD: " + byteArrayToHex(bgpPayload));
+                        //System.out.println("BGP HEADER: " + byteArrayToHex(bgpHeader));
+                        //System.out.println("BGP PAYLOAD: " + byteArrayToHex(bgpPayload));
 
                         switch (bgpType[0]) {
                             case BGP_OPEN:
@@ -127,7 +140,7 @@ public class bgpListener extends Thread  {
                                 //       |                                                               |
                                 //       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-                                loggingQueue.put("bgpType: BGP_OPEN");
+                                System.out.println("bgpType: BGP_OPEN");
 
                                 byte[] bgpPeerVersion = new byte[1];
                                 byte[] bgpPeerAutonomousSystem = new byte[2];
@@ -141,11 +154,11 @@ public class bgpListener extends Thread  {
                                 System.arraycopy(bgpPayload, 5, bgpPeerIdentifier, 0, 4);
                                 System.arraycopy(bgpPayload, 9, bgpPeerAdditionalParametersLength, 0, 1);
 
-                                loggingQueue.put("BGP_OPEN -> Version: " + (bgpPeerVersion[0] & 0xFF));
-                                loggingQueue.put("BGP_OPEN -> Peer AS Number: " + (((bgpPeerAutonomousSystem[0] & 0xFF ) << 8 ) | (bgpPeerAutonomousSystem[1]  & 0xFF)));
-                                loggingQueue.put("BGP_OPEN -> Peer Hold Time: " + (((bgpPeerHoldTime[0] & 0xFF ) << 8 ) | (bgpPeerHoldTime[1]  & 0xFF)));
-                                loggingQueue.put("BGP_OPEN -> Identifier: " + ((bgpPeerIdentifier[0] & 0xFF) + "." + (bgpPeerIdentifier[1] & 0xFF) + "." + (bgpPeerIdentifier[2] & 0xFF) + "." + (bgpPeerIdentifier[3] & 0xFF)));
-                                //loggingQueue.put("BGP_OPEN -> Additional Parameters Length: " + (bgpPeerAdditionalParametersLength[0] & 0xFF));
+                                System.out.println("BGP_OPEN -> Version: " + (bgpPeerVersion[0] & 0xFF));
+                                System.out.println("BGP_OPEN -> Peer AS Number: " + (((bgpPeerAutonomousSystem[0] & 0xFF ) << 8 ) | (bgpPeerAutonomousSystem[1]  & 0xFF)));
+                                System.out.println("BGP_OPEN -> Peer Hold Time: " + (((bgpPeerHoldTime[0] & 0xFF ) << 8 ) | (bgpPeerHoldTime[1]  & 0xFF)));
+                                System.out.println("BGP_OPEN -> Identifier: " + ((bgpPeerIdentifier[0] & 0xFF) + "." + (bgpPeerIdentifier[1] & 0xFF) + "." + (bgpPeerIdentifier[2] & 0xFF) + "." + (bgpPeerIdentifier[3] & 0xFF)));
+                                //System.out.println("BGP_OPEN -> Additional Parameters Length: " + (bgpPeerAdditionalParametersLength[0] & 0xFF));
 
                                 if ((bgpPeerAdditionalParametersLength[0] & 0xFF)>0) {
                                     // this is not it.... we received additional parameters
@@ -158,7 +171,7 @@ public class bgpListener extends Thread  {
                                     int i = 0;
 
                                     while (i < (bgpPeerAdditionalParametersLength[0] & 0xFF)) {
-                                        loggingQueue.put("BGP_OPEN -> Additional Parameter: TYPE:" + bgpAdditionalParameters[0+i] + " LENGTH: " +  bgpAdditionalParameters[1+i] + " (No Further Parsing)");
+                                        System.out.println("BGP_OPEN -> Additional Parameter: TYPE:" + bgpAdditionalParameters[0+i] + " LENGTH: " +  bgpAdditionalParameters[1+i] + " (No Further Parsing)");
                                         i=i+((bgpAdditionalParameters[1+i] & 0xFF)+2); // increase size of I with additional parameter length
                                     }
                                 }
@@ -167,14 +180,7 @@ public class bgpListener extends Thread  {
                                 // After a TCP connection is established, the first message sent by each
                                 // side is an OPEN message.  If the OPEN message is acceptable, a
                                 // KEEPALIVE message confirming the OPEN is sent back.
-
                                 sendKeepAlive();
-
-                                // sleep 3 seconds and then send our OPEN_MESSAGE
-                                Thread.sleep(3000);
-
-                                sendBgpOpen();
-
 
                                 break;
                             case BGP_UPDATE:
@@ -190,8 +196,10 @@ public class bgpListener extends Thread  {
                                 //      |   Network Layer Reachability Information (variable) |
                                 //      +-----------------------------------------------------+
 
-                                loggingQueue.put("bgpType: BGP_UPDATE");
-                                loggingQueue.put("PAYLOAD: " + byteArrayToHex(bgpPayload));
+                                System.out.println("bgpType: BGP_UPDATE");
+                                System.out.println("PAYLOAD: " + byteArrayToHex(bgpPayload));
+
+
                                 break;
                             case BGP_NOTIFICATION:
                                 // BGP_NOTIFICATION message is sent when an error condiction is detected. connection is closed afterwards
@@ -201,7 +209,7 @@ public class bgpListener extends Thread  {
                                 //     | Error code    | Error subcode |   Data (variable)             |
                                 //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-                                loggingQueue.put("bgpType: BGP_NOTIFICATION");
+                                System.out.println("bgpType: BGP_NOTIFICATION");
 
                                 // parse NotificationMessage
                                 byte[] bgpErrorCode = new byte[1];
@@ -211,25 +219,25 @@ public class bgpListener extends Thread  {
                                 System.arraycopy(bgpPayload, 1, bgpErrorSubCode, 0, 1);
 
                                 // print the Error Code value from lookup Table
-                                loggingQueue.put("BGP_NOTIFICATION -> Error Code: " + bgpNotificationCodes[bgpErrorCode[0]]);
+                                System.out.println("BGP_NOTIFICATION -> Error Code: " + bgpNotificationCodes[bgpErrorCode[0]]);
 
                                 // print the Error SubCode value from lookup Table
-                                loggingQueue.put("BGP_NOTIFICATION -> Error SubCode: " + bgpNotificationSubCodes[bgpErrorCode[0]][bgpErrorSubCode[0]]);
+                                System.out.println("BGP_NOTIFICATION -> Error SubCode: " + bgpNotificationSubCodes[bgpErrorCode[0]][bgpErrorSubCode[0]]);
 
                                 break;
                             case BGP_KEEPALIVE:
                                 // A KEEPALIVE message consists of only the message header and has a length of 19 octets.
-                                //loggingQueue.put("bgpType: BGP_KEEPALIVE");
-                                    sendKeepAlive();
-
+                                System.out.println("bgpType: BGP_KEEPALIVE");
+                                //sendKeepAlive();
                                 break;
+
                             default:
                                 System.out.print("bgpType: UNKNOWN bgp type: " + byteArrayToHex(bgpType));
                                 break;
                         }
                     }
                 } catch (IOException errorMessage) {
-                    loggingQueue.put("TCP Session closed");
+                    System.out.println("TCP Session closed");
                 }
             }
         } catch (Exception e) {}
@@ -255,8 +263,8 @@ public class bgpListener extends Thread  {
 
         // write data to socket
         try {
-            loggingQueue.put("--");
-            loggingQueue.put("Sending BGP_OPEN: " + byteArrayToHex(sendOpen));
+            System.out.println("--");
+            System.out.println("Sending BGP_OPEN: " + byteArrayToHex(sendOpen));
             os.write(sendOpen);
             os.flush();
         } catch (Exception e) {
@@ -274,8 +282,8 @@ public class bgpListener extends Thread  {
 
         // write data to socket
         try {
-  //          loggingQueue.put("--");
-//            loggingQueue.put("Sending KeepAlive: " + byteArrayToHex(keepAlive));
+            System.out.println("--");
+            System.out.println("Sending KeepAlive: " + byteArrayToHex(keepAlive));
             os.write(keepAlive);
             os.flush();
         } catch (Exception e) {
