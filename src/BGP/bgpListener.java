@@ -12,7 +12,7 @@ public class bgpListener extends Thread  {
 
     // our BGP settings
     private static int ourAutonomousSystemNumber = 11111;
-    private static int ourHoldTime = 180;
+    private static int ourHoldTime = 60;
     private static int ourKeepAliveTimer = ourHoldTime/3;
     private byte[] ourIdentifier = new byte[4];
 

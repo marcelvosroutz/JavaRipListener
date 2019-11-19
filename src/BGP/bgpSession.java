@@ -28,9 +28,11 @@ public class bgpSession extends Thread  {
 
     // Construct a MultiDimensional array with BGP error cores in Plain Text
     private String[][] bgpNotificationSubCodes = new String[][]{
-            {},
+            {"", "", "", "", "", "", "", ""},
             {"", "Connection Not Synchronized", "Bad Message Length", "Bad Message Type"},
-            {"", "Unsupported Version Number", "Bad Peer AS", "Bad BGP Identifier", "Unsupported Optional Parameter", "Deprecated", "Unacceptable Hold Time"}
+            {"", "Unsupported Version Number", "Bad Peer AS", "Bad BGP Identifier", "Unsupported Optional Parameter", "Deprecated", "Unacceptable Hold Time"},
+            {"", "", "", "", "", "", "", ""},
+            {"", "", "", "", "", "", "", ""}
     };
 
     private DataInputStream is;
@@ -230,6 +232,10 @@ public class bgpSession extends Thread  {
                                 // print the Error SubCode value from lookup Table
                                 System.out.println("BGP_NOTIFICATION -> Error SubCode: " + bgpNotificationSubCodes[bgpErrorCode[0]][bgpErrorSubCode[0]]);
 
+                                // terminate session
+                                socket.close();
+                                ourCurrentState=STATE_IDLE;
+
                                 break;
                             case BGP_KEEPALIVE:
                                 // A KEEPALIVE message consists of only the message header and has a length of 19 octets.
@@ -253,6 +259,7 @@ public class bgpSession extends Thread  {
                     }
                 } catch (IOException errorMessage) {
                     System.out.println("ERROR: " + errorMessage);
+                    ourCurrentState=STATE_IDLE;
                 }
     }
 
@@ -302,7 +309,7 @@ public class bgpSession extends Thread  {
 
         // write data to socket
         try {
-            System.out.println("Sending KeepAlive: " + byteArrayToHex(keepAlive));
+            System.out.println("Sending KeepAlive to " + socket.getInetAddress().getHostName() + ":" + socket.getPort());
             os.write(keepAlive);
             os.flush();
         } catch (Exception e) {

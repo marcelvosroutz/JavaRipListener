@@ -11,8 +11,8 @@ public class keepAliveTread extends Thread {
 
     public keepAliveTread(int holdTime, int keepAliveTime, ArrayList bgpSessions) {
         runner = new Thread(this, "keepAliveTread Thread");
-        this.holdTime=holdTime;
-        this.keepAliveTime=keepAliveTime;
+        this.holdTime = holdTime;
+        this.keepAliveTime = keepAliveTime;
         this.bgpSessions = bgpSessions;
     }
 
@@ -32,8 +32,6 @@ public class keepAliveTread extends Thread {
                           // only when BGP peer has transitioned to Established state, start to send keepAlives
                           if (bgpSession.getFiniteStateMode() == bgpSession.STATE_ESTABLISHED) {
                               bgpSession.sendKeepAlive();
-                          } else {
-                              System.out.println("Unable to send keepAlive, FSM is not in ESTABLISHED state. Currently in: " + bgpSession.getFiniteStateMode());
                           }
                       }
                   }
