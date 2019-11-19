@@ -1,29 +1,45 @@
 package BGP;
 
-import java.io.BufferedOutputStream;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 public class keepAliveTread extends Thread {
     Thread runner;
 
     private int holdTime, keepAliveTime;
-    bgpListener bgpListener;
+    ArrayList bgpSessions;
 
-    public keepAliveTread(int holdTime, int keepAliveTime, bgpListener bgpListener) {
+    public keepAliveTread(int holdTime, int keepAliveTime, ArrayList bgpSessions) {
         runner = new Thread(this, "keepAliveTread Thread");
         this.holdTime=holdTime;
         this.keepAliveTime=keepAliveTime;
-        this.bgpListener = bgpListener;
+        this.bgpSessions = bgpSessions;
     }
 
     public void run() {
         while (true) {
             try {
-              // make thread sleep for keepAliveTime * 1000 (msec) before sending keepalive
+              // make thread sleep for keepAliveTime * 1000 (msec) before sending keepalive (holdTimer/3)
               sleep(keepAliveTime*1000);
-              System.out.println("Sending our keepalive!");
+
+              // synchronize bgpSessions object (arrayList is not threadsafe!)
+              synchronized (bgpSessions) {
+                  Iterator iterator = bgpSessions.iterator();
+                  while (iterator.hasNext()) {
+                      bgpSession bgpSession = (bgpSession)iterator.next();
+
+                      synchronized (bgpSession) {
+                          // only when BGP peer has transitioned to Established state, start to send keepAlives
+                          if (bgpSession.getFiniteStateMode() == bgpSession.STATE_ESTABLISHED) {
+                              bgpSession.sendKeepAlive();
+                          } else {
+                              System.out.println("Unable to send keepAlive, FSM is not in ESTABLISHED state. Currently in: " + bgpSession.getFiniteStateMode());
+                          }
+                      }
+                  }
+              }
             } catch (InterruptedException e) {
-                System.out.println("Cannot sleep! Phun intended :)");
+                System.out.println("Can't Sleep! Phun intended :)");
             }
         }
     }

@@ -12,8 +12,8 @@ import java.awt.Frame;  // Using Frame class in package java.awt
 public class javaRouting {
 
     // Lets define some addresses we want to send back
-    public static final String[] defaultRoute = { "0.0.0.0", "0.0.0.0" }; // We will send a default of 0.0.0.0/0 using RIP
-    public static final String[] ourNetwork = { "10.50.75.0", "255.255.255.0" }; // We will send a default of 0.0.0.0/0 using RIP
+    public static final String[] defaultRoute = { "0.0.0.0", "0.0.0.0" }; // We will send a default of 0.0.0.0/0
+    public static final String[] ourNetwork = { "10.50.75.0", "255.255.255.0" }; // We will send 10.50.75.0/24 
 
     // define RIP command tags
     public static final byte RIP_REQUEST = 0x01, RIP_RESPONSE = 0x02, RIP_TRACEON = 0x03, RIP_TRACEOFF =0x04, RIP_RESERVED = 0x05;
@@ -37,8 +37,8 @@ public class javaRouting {
         //myGui gui = new myGui(loggingQueue);
 
         // start thread for receiving RIPv2 traffic (As RIPv2 is backwards compatible; this one also handles RIPv1 traffic
-        Thread ripListener = new Thread (new ripListener(routeHandler));
-        ripListener.start();
+        //Thread ripListener = new Thread (new ripListener(routeHandler));
+        //ripListener.start();
 
         // start thread for initiating BGP peering session
         Thread bgpListener = new Thread (new bgpListener(routeHandler));
