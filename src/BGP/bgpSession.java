@@ -52,7 +52,7 @@ public class bgpSession extends Thread  {
 
         // Update finite state machine
         ourCurrentState = STATE_CONNECT;
-        System.out.println("BGP peer transitioning from Idle to Connect");
+        System.out.println("    FSM -> BGP peer transitioning from Idle to Connect");
     }
 
     public void run() {
@@ -71,7 +71,7 @@ public class bgpSession extends Thread  {
                     // KEEPALIVE message confirming the OPEN is sent back.
                     sendBgpOpen();
 
-                    // bgp header is 19 bytes
+                     // bgp header is 19 bytes
                     byte[] bgpHeader = new byte[19];
                     byte[] bgpPayload;
 
@@ -138,7 +138,7 @@ public class bgpSession extends Thread  {
                                 //       |                                                               |
                                 //       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-                                System.out.println("bgpType: BGP_OPEN");
+                                System.out.println("Received message from " + socket.getInetAddress() + " Type: BGP_OPEN");
 
                                 byte[] bgpPeerVersion = new byte[1];
                                 byte[] bgpPeerAutonomousSystem = new byte[2];
@@ -152,11 +152,11 @@ public class bgpSession extends Thread  {
                                 System.arraycopy(bgpPayload, 5, bgpPeerIdentifier, 0, 4);
                                 System.arraycopy(bgpPayload, 9, bgpPeerAdditionalParametersLength, 0, 1);
 
-                                System.out.println("BGP_OPEN -> Version: " + (bgpPeerVersion[0] & 0xFF));
-                                System.out.println("BGP_OPEN -> Peer AS Number: " + (((bgpPeerAutonomousSystem[0] & 0xFF ) << 8 ) | (bgpPeerAutonomousSystem[1]  & 0xFF)));
-                                System.out.println("BGP_OPEN -> Peer Hold Time: " + (((bgpPeerHoldTime[0] & 0xFF ) << 8 ) | (bgpPeerHoldTime[1]  & 0xFF)));
-                                System.out.println("BGP_OPEN -> Identifier: " + ((bgpPeerIdentifier[0] & 0xFF) + "." + (bgpPeerIdentifier[1] & 0xFF) + "." + (bgpPeerIdentifier[2] & 0xFF) + "." + (bgpPeerIdentifier[3] & 0xFF)));
-                                System.out.println("BGP_OPEN -> Additional Parameters Length: " + (bgpPeerAdditionalParametersLength[0] & 0xFF));
+                                System.out.println("    BGP_OPEN -> Version: " + (bgpPeerVersion[0] & 0xFF));
+                                System.out.println("    BGP_OPEN -> Peer AS Number: " + (((bgpPeerAutonomousSystem[0] & 0xFF ) << 8 ) | (bgpPeerAutonomousSystem[1]  & 0xFF)));
+                                System.out.println("    BGP_OPEN -> Peer Hold Time: " + (((bgpPeerHoldTime[0] & 0xFF ) << 8 ) | (bgpPeerHoldTime[1]  & 0xFF)));
+                                System.out.println("    BGP_OPEN -> Identifier: " + ((bgpPeerIdentifier[0] & 0xFF) + "." + (bgpPeerIdentifier[1] & 0xFF) + "." + (bgpPeerIdentifier[2] & 0xFF) + "." + (bgpPeerIdentifier[3] & 0xFF)));
+                                System.out.println("    BGP_OPEN -> Additional Parameters Length: " + (bgpPeerAdditionalParametersLength[0] & 0xFF));
 
                                 if ((bgpPeerAdditionalParametersLength[0] & 0xFF)>0) {
                                     // this is not it.... we received additional parameters
@@ -169,14 +169,14 @@ public class bgpSession extends Thread  {
                                     int i = 0;
 
                                     while (i < (bgpPeerAdditionalParametersLength[0] & 0xFF)) {
-                                        System.out.println("BGP_OPEN -> Additional Parameter: TYPE:" + bgpAdditionalParameters[0+i] + " LENGTH: " +  bgpAdditionalParameters[1+i] + " (No Further Parsing)");
+                                        System.out.println("    BGP_OPEN -> Additional Parameter: TYPE:" + bgpAdditionalParameters[0+i] + " LENGTH: " +  bgpAdditionalParameters[1+i] + " (No Further Parsing)");
                                         i=i+((bgpAdditionalParameters[1+i] & 0xFF)+2); // increase size of I with additional parameter length
                                     }
                                 }
 
                                 if (ourCurrentState==STATE_OPEN_SENT) {
                                     ourCurrentState = STATE_OPEN_CONFIRM;
-                                    System.out.println("BGP peer transitioning from OpenSent to OpenConfirm");
+                                    System.out.println("    FSM -> BGP peer transitioning from OpenSent to OpenConfirm");
                                 }
 
                                 // after we received a BGP_OPEN we need to send a keepalive
@@ -204,13 +204,13 @@ public class bgpSession extends Thread  {
                                 //      |   Network Layer Reachability Information (variable) |
                                 //      +-----------------------------------------------------+
 
-                                System.out.println("bgpType: BGP_UPDATE");
-                                System.out.println("PAYLOAD: " + byteArrayToHex(bgpPayload));
+                                System.out.println("Received message from " + socket.getInetAddress() + " Type: BGP_UPDATE");
+                                //System.out.println("PAYLOAD: " + byteArrayToHex(bgpPayload));
 
 
                                 // handle the withdrawn routes
                                 int withdrawnRoutesLenght = (((bgpPayload[0] & 0xFF ) << 8 ) | (bgpPayload[1]  & 0xFF));
-                                System.out.println("Withdrawn routes: " + withdrawnRoutesLenght);
+                                System.out.println("    BGP_UPDATE -> Withdrawn routes: " + withdrawnRoutesLenght);
 
                                 if (withdrawnRoutesLenght>0) {
                                     byte[] withdrawnRoutes = new byte[withdrawnRoutesLenght];
@@ -221,19 +221,15 @@ public class bgpSession extends Thread  {
 
                                 // handle the new routes
                                 int totalPathAttributeLength = (((bgpPayload[0+offset] & 0xFF ) << 8 ) | (bgpPayload[1+offset]  & 0xFF));
-                                System.out.println("Total Path Attribute Length: " + totalPathAttributeLength);
+                                System.out.println("    BGP_UPDATE -> Total Path Attribute Length: " + totalPathAttributeLength);
+
+
+                                byte[] pathAttributes = new byte[0];
 
                                 if (totalPathAttributeLength>0) {
                                     // parse BGP entry:
-                                    byte[] pathAttributes = new byte[totalPathAttributeLength];
+                                     pathAttributes = new byte[totalPathAttributeLength];
                                     System.arraycopy(bgpPayload, offset+2, pathAttributes, 0, totalPathAttributeLength);
-                                    System.out.println("PathAttributes: " + byteArrayToHex(pathAttributes));
-
-                                    bgpRouteEntry bgpRouteEntry = new bgpRouteEntry(pathAttributes);
-
-                                    System.out.println("Parsed Route Entry attributes: " + bgpRouteEntry.printAllAttributes());
-
-
                                 }
 
                                 // skip 2 bytes + 2 bytes + length of the withdrawnroutes + length of  totalPathAttributeLength
@@ -264,7 +260,11 @@ public class bgpSession extends Thread  {
                                         prefixString = prefixString.substring(1);
 
                                         // echo results
-                                        System.out.println("(" + prefixCount + ") NLRI -> Length: " + prefixLength + " prefix: " + prefixString + "/" + prefixBits);
+                                       // System.out.println("    BGP_UPDATE -> (" + prefixCount + ")  NLRI: ");
+
+                                        bgpRouteEntry bgpRouteEntry = new bgpRouteEntry(pathAttributes, prefix, prefixBits);
+
+                                        bgpRouteEntry.printPrefixEntry();
 
                                         // skip 2 bytes + 2 bytes + length of the withdrawnroutes + length of  totalPathAttributeLength + 1 + prefixlength
                                         offset = offset + 1 + prefixLength;
@@ -285,7 +285,7 @@ public class bgpSession extends Thread  {
                                 //     | Error code    | Error subcode |   Data (variable)             |
                                 //     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-                                System.out.println("bgpType: BGP_NOTIFICATION");
+                                System.out.println("Received message from " + socket.getInetAddress() + " Type: BGP_NOTIFICATION");
 
                                 // parse NotificationMessage
                                 byte[] bgpErrorCode = new byte[1];
@@ -318,8 +318,11 @@ public class bgpSession extends Thread  {
                                 // update our finite machine state, only allow to move to CONNECT state from OPEN_CONFIRM state
                                 if (ourCurrentState==STATE_OPEN_CONFIRM) {
                                     ourCurrentState = STATE_ESTABLISHED;
-                                    System.out.println("BGP peer transitioning from OpenConfirm to Connected");
+                                    System.out.println("    FSM -> BGP peer transitioning from OpenConfirm to Connected");
                                 }
+
+                                System.out.println("Received message from " + socket.getInetAddress() + " Type: BGP_KEEPALIVE ");
+                                System.out.println("    BGP_KEEPALIVE -> Resetting peer last-seen timestamp");
                                 break;
 
                             default:
@@ -351,10 +354,14 @@ public class bgpSession extends Thread  {
         sendOpen[27] = 4; // BGP IDENTIFIER
         sendOpen[28] = 0; // BGP ADDITIONAL PARAMETER LENGTH = 0 // We do not send additional parameters as this is a dumb java program :)
 
+        System.out.println("Sending BGP_OPEN to " + socket.getInetAddress() + " bgpVersion: 4,  ourAS: " + ourAutonomousSystemNumber + ", ourHoldTime: " + ourHoldTime);
+
+
+
         // write data to socket
         try {
-            System.out.println("--");
-            System.out.println("Sending BGP_OPEN: " + byteArrayToHex(sendOpen));
+            //System.out.println("--");
+            //System.out.println("Sending BGP_OPEN: " + byteArrayToHex(sendOpen));
             os.write(sendOpen);
             os.flush();
         } catch (Exception e) {
@@ -364,7 +371,7 @@ public class bgpSession extends Thread  {
         // update our finite machine state
         if (ourCurrentState==STATE_CONNECT) {
             ourCurrentState = STATE_OPEN_SENT;
-            System.out.println("BGP peer transitioning from Active to OpenSent");
+            System.out.println("    FSM -> BGP peer transitioning from Active to OpenSent");
         }
     }
 
@@ -378,7 +385,7 @@ public class bgpSession extends Thread  {
 
         // write data to socket
         try {
-            //System.out.println("Sending KeepAlive to " + socket.getInetAddress().getHostName() + ":" + socket.getPort());
+            System.out.println("Sending KeepAlive to " + socket.getInetAddress().getHostName() + ":" + socket.getPort());
             os.write(keepAlive);
             os.flush();
         } catch (Exception e) {
