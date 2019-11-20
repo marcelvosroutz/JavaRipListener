@@ -208,8 +208,64 @@ public class bgpSession extends Thread  {
                                 System.out.println("PAYLOAD: " + byteArrayToHex(bgpPayload));
 
 
+                                // handle the withdrawn routes
+                                int withdrawnRoutesLenght = (((bgpPayload[0] & 0xFF ) << 8 ) | (bgpPayload[1]  & 0xFF));
+                                System.out.println("Withdrawn routes: " + withdrawnRoutesLenght);
+
+                                if (withdrawnRoutesLenght>0) {
+                                    byte[] withdrawnRoutes = new byte[withdrawnRoutesLenght];
+                                }
+
+                                // skip 2 bytes + length of the routes
+                                int offset = withdrawnRoutesLenght+2;
+
+                                // handle the new routes
+                                int totalPathAttributeLength = (((bgpPayload[0+offset] & 0xFF ) << 8 ) | (bgpPayload[1+offset]  & 0xFF));
+                                System.out.println("Total Path Attribute Length: " + totalPathAttributeLength);
+                                System.out.println("todo: skipping " + totalPathAttributeLength + " bytes, create bgpPrefixEntry class to store all path attributes (and store transitive state for forwarding)");
+
+                                // skip 2 bytes + 2 bytes + length of the withdrawnroutes + length of  totalPathAttributeLength
+                                offset = 2+2+withdrawnRoutesLenght+totalPathAttributeLength;
+
+                                // parse prefix
+                                int prefixLength = (int) Math.ceil((double) bgpPayload[0+offset] / 8);
+
+                                int prefixBits =  (bgpPayload[0+offset]);
+                                int prefixCount = 1;
+
+                                if (prefixLength>0 ) { // we found a NLRI
+                                    while (offset < bgpPayload.length) {
+
+                                        // update prefix information
+                                        prefixLength = (int) Math.ceil((double) bgpPayload[0+offset] / 8);
+                                        prefixBits =  (bgpPayload[0+offset]);
+
+                                        // loop multiple prefixes NLRI's
+                                        byte prefix[] = new byte[4];
+                                        System.arraycopy(bgpPayload, offset + 1, prefix, 0, prefixLength);
+
+                                        // convert prefix to human readable prefix
+                                        String prefixString = new String();
+                                        for (int i = 0; i < prefix.length; i++) {
+                                            prefixString = prefixString + "." + (prefix[i] & 0xFF);
+                                        }
+                                        prefixString = prefixString.substring(1);
+
+                                        // echo results
+                                        System.out.println("(" + prefixCount + ") NLRI -> Length: " + prefixLength + " prefix: " + prefixString + "/" + prefixBits);
+
+                                        // skip 2 bytes + 2 bytes + length of the withdrawnroutes + length of  totalPathAttributeLength + 1 + prefixlength
+                                        offset = offset + 1 + prefixLength;
+
+                                        prefixCount++;
+                                    }
+                                }
+
                                 break;
                             case BGP_NOTIFICATION:
+                                // update peerLastSeen as we have got a package
+                                lastSeenTimeStamp = System.currentTimeMillis();
+
                                 // BGP_NOTIFICATION message is sent when an error condiction is detected. connection is closed afterwards
                                 // 0                   1                   2                   3
                                 // 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -236,9 +292,15 @@ public class bgpSession extends Thread  {
                                 socket.close();
                                 ourCurrentState=STATE_IDLE;
 
+
+
                                 break;
                             case BGP_KEEPALIVE:
-                                // A KEEPALIVE message consists of only the message header and has a length of 19 octets.
+                                // update peerLastSeen as we have got a package
+                                lastSeenTimeStamp = System.currentTimeMillis();
+
+                                // A KEEPALIVE message
+                                // consists of only the message header and has a length of 19 octets.
                                 System.out.println("Received keepAlive from " + socket.getInetAddress().getHostName()+ ":" + socket.getPort());
 
                                 // update our finite machine state, only allow to move to CONNECT state from OPEN_CONFIRM state
@@ -246,10 +308,6 @@ public class bgpSession extends Thread  {
                                     ourCurrentState = STATE_ESTABLISHED;
                                     System.out.println("BGP peer transitioning from OpenConfirm to Connected");
                                 }
-                                
-                                // update peerLastSeen as we have got a package
-                                lastSeenTimeStamp = System.currentTimeMillis();
-
                                 break;
 
                             default:
@@ -296,7 +354,6 @@ public class bgpSession extends Thread  {
             ourCurrentState = STATE_OPEN_SENT;
             System.out.println("BGP peer transitioning from Active to OpenSent");
         }
-
     }
 
     public void sendKeepAlive() {
