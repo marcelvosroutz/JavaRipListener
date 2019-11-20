@@ -156,7 +156,7 @@ public class bgpSession extends Thread  {
                                 System.out.println("BGP_OPEN -> Peer AS Number: " + (((bgpPeerAutonomousSystem[0] & 0xFF ) << 8 ) | (bgpPeerAutonomousSystem[1]  & 0xFF)));
                                 System.out.println("BGP_OPEN -> Peer Hold Time: " + (((bgpPeerHoldTime[0] & 0xFF ) << 8 ) | (bgpPeerHoldTime[1]  & 0xFF)));
                                 System.out.println("BGP_OPEN -> Identifier: " + ((bgpPeerIdentifier[0] & 0xFF) + "." + (bgpPeerIdentifier[1] & 0xFF) + "." + (bgpPeerIdentifier[2] & 0xFF) + "." + (bgpPeerIdentifier[3] & 0xFF)));
-                                //System.out.println("BGP_OPEN -> Additional Parameters Length: " + (bgpPeerAdditionalParametersLength[0] & 0xFF));
+                                System.out.println("BGP_OPEN -> Additional Parameters Length: " + (bgpPeerAdditionalParametersLength[0] & 0xFF));
 
                                 if ((bgpPeerAdditionalParametersLength[0] & 0xFF)>0) {
                                     // this is not it.... we received additional parameters
@@ -222,7 +222,19 @@ public class bgpSession extends Thread  {
                                 // handle the new routes
                                 int totalPathAttributeLength = (((bgpPayload[0+offset] & 0xFF ) << 8 ) | (bgpPayload[1+offset]  & 0xFF));
                                 System.out.println("Total Path Attribute Length: " + totalPathAttributeLength);
-                                System.out.println("todo: skipping " + totalPathAttributeLength + " bytes, create bgpPrefixEntry class to store all path attributes (and store transitive state for forwarding)");
+
+                                if (totalPathAttributeLength>0) {
+                                    // parse BGP entry:
+                                    byte[] pathAttributes = new byte[totalPathAttributeLength];
+                                    System.arraycopy(bgpPayload, offset+2, pathAttributes, 0, totalPathAttributeLength);
+                                    System.out.println("PathAttributes: " + byteArrayToHex(pathAttributes));
+
+                                    bgpRouteEntry bgpRouteEntry = new bgpRouteEntry(pathAttributes);
+
+                                    System.out.println("Parsed Route Entry attributes: " + bgpRouteEntry.printAllAttributes());
+
+
+                                }
 
                                 // skip 2 bytes + 2 bytes + length of the withdrawnroutes + length of  totalPathAttributeLength
                                 offset = 2+2+withdrawnRoutesLenght+totalPathAttributeLength;
@@ -301,7 +313,7 @@ public class bgpSession extends Thread  {
 
                                 // A KEEPALIVE message
                                 // consists of only the message header and has a length of 19 octets.
-                                System.out.println("Received keepAlive from " + socket.getInetAddress().getHostName()+ ":" + socket.getPort());
+                                //System.out.println("Received keepAlive from " + socket.getInetAddress().getHostName()+ ":" + socket.getPort());
 
                                 // update our finite machine state, only allow to move to CONNECT state from OPEN_CONFIRM state
                                 if (ourCurrentState==STATE_OPEN_CONFIRM) {
@@ -366,7 +378,7 @@ public class bgpSession extends Thread  {
 
         // write data to socket
         try {
-            System.out.println("Sending KeepAlive to " + socket.getInetAddress().getHostName() + ":" + socket.getPort());
+            //System.out.println("Sending KeepAlive to " + socket.getInetAddress().getHostName() + ":" + socket.getPort());
             os.write(keepAlive);
             os.flush();
         } catch (Exception e) {
