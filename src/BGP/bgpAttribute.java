@@ -8,7 +8,7 @@ public class bgpAttribute {
     private boolean isOptional,isTransitive,isPartial,isExtendedLength;
 
     private String[][] bgpAttributesTable = new String[][]{
-            // Type Code / Description / Optional / Transitive / Partial
+            // Type Code / Description / Reserved / Reserved / Reserved
             {"", "", "", "", ""}, /** NULL our first try as arrays start at 0 **/
             {"1", "ORIGIN", "", "", ""},
             {"2", "AS_PATH", "", "", ""},

@@ -7,7 +7,6 @@ public class bgpRouteEntry {
 
     private static byte[] prefix = new byte[4];
     private static int prefixLength;
-
     private LinkedList bgpAttributes = new LinkedList();
 
     public bgpRouteEntry(byte[] pathAttributes, byte[] prefix, int prefixLength) {
@@ -49,7 +48,7 @@ public class bgpRouteEntry {
         while (iterator.hasNext()) {
             bgpAttribute attributes = (bgpAttribute)iterator.next();
             System.out.println("             * Type: " + attributes.getTypeCode() + " (" + attributes.getDescription() + ")  [Optional: " + attributes.isOptional() + ", Transitive: " + attributes.isTransitive() + ", Partial: " + attributes.isPartial() + "]"
-                            + " Set to :" + byteArrayToHex(attributes.getAttributeValue()));
+                            + " Set to : " + byteArrayToHex(attributes.getAttributeValue()));
         }
 
         return "";

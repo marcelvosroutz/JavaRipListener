@@ -304,8 +304,6 @@ public class bgpSession extends Thread  {
                                 socket.close();
                                 ourCurrentState=STATE_IDLE;
 
-
-
                                 break;
                             case BGP_KEEPALIVE:
                                 // update peerLastSeen as we have got a package
