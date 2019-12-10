@@ -1,5 +1,6 @@
 import RIP.*;
 import BGP.*;
+import OSPF.*;
 
 import java.util.concurrent.LinkedBlockingQueue;
 import java.awt.Frame;  // Using Frame class in package java.awt
@@ -41,8 +42,12 @@ public class javaRouting {
         //ripListener.start();
 
         // start thread for initiating BGP peering session
-        Thread bgpListener = new Thread (new bgpListener(routeHandler));
-        bgpListener.start();
+        //Thread bgpListener = new Thread (new bgpListener(routeHandler));
+        //bgpListener.start();
+
+        // Lets do OSPF!
+        Thread ospfListener = new Thread (new ospfListener(routeHandler));
+        ospfListener.start();
 
         // start a thread for maintaining routing table entries
         // todo: cleanup routing tables.
