@@ -1,9 +1,15 @@
 import RIP.*;
-import BGP.*;
 import OSPF.*;
 
+// RAW socket support
+
 import java.util.concurrent.LinkedBlockingQueue;
-import java.awt.Frame;  // Using Frame class in package java.awt
+
+// Raw Sockets
+import rocksaw.net.RawSocket;
+import static rocksaw.net.RawSocket.PF_INET;
+import static rocksaw.net.RawSocket.PF_INET6;
+import static rocksaw.net.RawSocket.getProtocolByName;
 
 // Routz RIP implementation challenge :)
 // RIPv1 as per https://tools.ietf.org/html/rfc1058 in ripListener
